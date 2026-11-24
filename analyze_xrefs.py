@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-import sys
+import sys, re
 from collections import deque
 from elftools.elf.elffile import ELFFile
 from capstone import Cs, CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN
-from capstone.arm64 import ARM64_OP_IMM, ARM64_OP_REG, ARM64_OP_MEM
 
 path = sys.argv[1]
 with open(path, "rb") as f:
@@ -31,35 +30,48 @@ with open(path, "rb") as f:
 
 by_va = {v: n for n, v in target_va.items()}
 md = Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN)
-md.detail = True
 history = deque(maxlen=25)
 pending = []
 hits = []
 decoded = 0
-for x in md.disasm(code, text_addr):
+def imm(s):
+    s = s.strip().lstrip("#")
+    return int(s, 0)
+for addr, size, mnemonic, op_str in md.disasm_lite(code, text_addr):
     decoded += 1
-    history.append(x)
+    line = f"0x{addr:x}: {mnemonic} {op_str}"
+    history.append(line)
     keep = []
     for page, reg, age in pending:
         age += 1
-        if age <= 8:
-            y = x
-            found = None
-            if y.mnemonic == "add" and len(y.operands) >= 3:
-                a, b, c = y.operands[:3]
-                if a.type == ARM64_OP_REG and b.type == ARM64_OP_REG and c.type == ARM64_OP_IMM and b.reg == reg:
-                    found = page + c.imm
-            elif y.mnemonic.startswith("ldr") and len(y.operands) >= 2:
-                mem = y.operands[1]
-                if mem.type == ARM64_OP_MEM and mem.mem.base == reg:
-                    found = page + mem.mem.disp
-            if found in by_va:
-                hits.append((by_va[found], found, x.address, list(history)))
-            elif y.mnemonic not in ("b", "bl", "br", "blr", "ret", "cbz", "cbnz", "tbz", "tbnz"):
-                keep.append((page, reg, age))
+        if age > 8:
+            continue
+        found = None
+        parts = [p.strip() for p in op_str.split(",")]
+        if mnemonic == "add" and len(parts) >= 3 and parts[1] == reg:
+            try:
+                found = page + imm(parts[2])
+            except ValueError:
+                pass
+        elif mnemonic.startswith("ldr") and len(parts) >= 2:
+            m = re.search(r"\[\s*(x\d+|w\d+)\s*,\s*(#[^\]]+)\]", parts[1])
+            if m and m.group(1) == reg:
+                try:
+                    found = page + imm(m.group(2))
+                except ValueError:
+                    pass
+        if found in by_va:
+            hits.append((by_va[found], found, addr, list(history)))
+        elif mnemonic not in ("b", "bl", "br", "blr", "ret", "cbz", "cbnz", "tbz", "tbnz"):
+            keep.append((page, reg, age))
     pending = keep
-    if x.mnemonic == "adrp" and len(x.operands) >= 2 and x.operands[1].type == ARM64_OP_IMM:
-        pending.append((x.operands[1].imm, x.operands[0].reg, 0))
+    if mnemonic == "adrp":
+        m = re.match(r"(x\d+|w\d+)\s*,\s*(#[^ ]+)", op_str)
+        if m:
+            try:
+                pending.append((imm(m.group(2)), m.group(1), 0))
+            except ValueError:
+                pass
 
 with open("report/currency-xrefs.txt", "w") as out:
     out.write("Target strings and virtual addresses:\n")
@@ -73,6 +85,5 @@ with open("report/currency-xrefs.txt", "w") as out:
             continue
         seen.add(key)
         out.write(f"\n===== {name} @ 0x{va:x}, reference instruction 0x{addr:x} =====\n")
-        for x in context:
-            out.write(f"0x{x.address:x}: {x.mnemonic} {x.op_str}\n")
+        out.write("\n".join(context) + "\n")
 print(f"Decoded {decoded} instructions; found {len(hits)} ADRP-based references across {len(target_va)} target strings")

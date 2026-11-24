@@ -39,12 +39,17 @@ history = deque(maxlen=40)
 pending = []
 hits = []
 decoded = 0
+ranges = [(0x243e00,0x244300),(0x2a7900,0x2a8000),(0x562200,0x562500),(0x6a8400,0x6a8c80),(0x6d0000,0x6d0400)]
+region_lines = {a:[] for a,b in ranges}
 def imm(s):
     s = s.strip().lstrip("#")
     return int(s, 0)
 for addr, size, mnemonic, op_str in md.disasm_lite(code, text_addr):
     decoded += 1
     line = f"0x{addr:x}: {mnemonic} {op_str}"
+    for a,b in ranges:
+        if a <= addr < b:
+            region_lines[a].append(line)
     history.append(line)
     keep = []
     for page, reg, age in pending:
@@ -91,4 +96,8 @@ with open("report/currency-xrefs.txt", "w") as out:
         seen.add(key)
         out.write(f"\n===== {name} @ 0x{va:x}, reference instruction 0x{addr:x} =====\n")
         out.write("\n".join(context) + "\n")
+with open("report/currency-regions.txt", "w") as out:
+    for a,b in ranges:
+        out.write(f"\n===== region 0x{a:x}-0x{b:x} =====\n")
+        out.write("\n".join(region_lines[a]) + "\n")
 print(f"Decoded {decoded} instructions; found {len(hits)} ADRP-based references across {len(target_va)} target strings")

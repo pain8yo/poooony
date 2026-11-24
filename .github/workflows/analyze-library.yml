@@ -1,0 +1,44 @@
+name: Analyze Android game library
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install analysis tools
+        run: sudo apt-get update && sudo apt-get install -y binutils
+      - name: Analyze ARM64 library
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p report
+          LIB=libMyPonyWorld.so
+          file "$LIB" > report/overview.txt
+          readelf -h -S -s "$LIB" >> report/overview.txt
+          nm -D -C "$LIB" > report/dynamic-symbols.txt 2>&1 || true
+          strings -a -t x "$LIB" > report/strings-offsets.txt
+          for term in Native_BuyCurrency Native_BuyPremiumCurrency Native_BuyTlsCurrency SetCurrencyData ResetCurrency SpendGems SpendBits SoftCurrency HardCurrency Total_Currency_Soft Total_Currency_Hard bits_amount gems_amount bits_limit gems_limit PlayerData MLP_Save mlp_save_prime.dat; do
+            grep -i -B 5 -A 8 "$term" report/strings-offsets.txt >> report/target-strings.txt || true
+          done
+          {
+            echo "=== Sections ==="
+            readelf -S "$LIB"
+            echo "=== Dynamic symbols ==="
+            cat report/dynamic-symbols.txt
+            echo "=== Relocations mentioning relevant symbols ==="
+            readelf -rW "$LIB" | grep -Ei 'currency|gems|bits|player|save' || true
+          } > report/elf-map.txt
+          sha256sum "$LIB" > report/checksum.txt
+      - name: Upload analysis report
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlp-android-library-analysis
+          path: report/
+          retention-days: 7

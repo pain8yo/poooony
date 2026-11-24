@@ -14,11 +14,16 @@ with open(path, "rb") as f:
     ro_data = ro.data()
     targets = [
         "Native_BuyCurrency", "Native_BuyPremiumCurrency", "Native_BuyTlsCurrency",
+        "Native_FreeGemsAdsFromHUD", "Native_FreeCoinsAdsFromHUD", "Native_BuyPopCurrency",
+        "Native_ModifyShardCost", "Native_SpendShardsPressed",
         "SetCurrencyData", "ResetCurrency", "SpendBits", "SpendGems",
         "SoftCurrency", "HardCurrency", "Total_Currency_Soft",
         "Total_Currency_Hard", "Spent_Currency_Soft", "Spent_Currency_Hard",
         "bits_amount", "gems_amount", "bits_limit", "gems_limit",
-        "PlayerData", "MLP_Save", "mlp_save_prime.dat"
+        "PlayerData", "PaidCash", "MLP_Save", "mlp_save_prime.dat",
+        "Currency", "currency", "cash", "coins", "Bits", "Gems",
+        "SoftCost", "HardCost", "CurrencyCount", "CurrencyName",
+        "FreeCash", "FreeCoins", "SetCurrencyIcon"
     ]
     target_va = {}
     for name in targets:
@@ -30,7 +35,7 @@ with open(path, "rb") as f:
 
 by_va = {v: n for n, v in target_va.items()}
 md = Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN)
-history = deque(maxlen=25)
+history = deque(maxlen=40)
 pending = []
 hits = []
 decoded = 0

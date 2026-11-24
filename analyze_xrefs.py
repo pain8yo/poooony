@@ -38,6 +38,7 @@ md = Cs(CS_ARCH_ARM64, CS_MODE_LITTLE_ENDIAN)
 history = deque(maxlen=40)
 pending = []
 hits = []
+field_stores = []
 decoded = 0
 ranges = [
     (0x240000,0x240090),(0x240700,0x240800),(0x243e00,0x244300),
@@ -59,6 +60,9 @@ def imm(s):
 for addr, size, mnemonic, op_str in md.disasm_lite(code, text_addr):
     decoded += 1
     line = f"0x{addr:x}: {mnemonic} {op_str}"
+    # Candidate writes to the two known currency slots.
+    if mnemonic.startswith(("str", "stp", "stur")) and ("#0x28" in op_str or "#0x38" in op_str):
+        field_stores.append((addr, line, list(history)))
     for a,b in ranges:
         if a <= addr < b:
             region_lines[a].append(line)
@@ -125,4 +129,10 @@ with open("report/currency-call-sites.txt", "w") as out:
         for addr, context in sites:
             out.write(f"\n-- call at 0x{addr:x} --\n")
             out.write("\n".join(context) + "\n")
-print(f"Decoded {decoded} instructions; found {len(hits)} ADRP-based references across {len(target_va)} target strings")
+with open("report/currency-field-stores.txt", "w") as out:
+    out.write("Candidate stores at offsets +0x28 or +0x38; base-object identity must be validated.\\n")
+    out.write(f"Total candidates: {len(field_stores)}\\n")
+    for addr, line, context in field_stores:
+        out.write("\\n-- candidate at 0x%x --\\n" % addr)
+        out.write("\\n".join(context + [line]) + "\\n")
+print(f"Decoded {decoded} instructions; found {len(hits)} ADRP-based references across {len(target_va)} target strings; {len(field_stores)} candidate stores")

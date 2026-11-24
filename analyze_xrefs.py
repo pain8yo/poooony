@@ -41,7 +41,7 @@ hits = []
 field_stores = []
 decoded = 0
 ranges = [
-    (0x240000,0x240090),(0x240700,0x240800),(0x243e00,0x244300),
+    (0x240000,0x240220),(0x240700,0x240800),(0x24c8a0,0x24c940),(0x860d80,0x860e90),(0x287700,0x2877e0),(0x243e00,0x244300),
     (0x24c8c0,0x24c930),(0x2854c0,0x285600),(0x287740,0x2877d0),
     (0x860dc0,0x860e80),(0x2a7900,0x2a8000),(0x562200,0x562500),
     (0x6a8400,0x6ab000),(0x6d0000,0x6d0400),
@@ -53,7 +53,7 @@ ranges = [
     (0x69f784,0x69f980),(0x6a0b80,0x6a0e40)
 ]
 region_lines = {a:[] for a,b in ranges}
-call_sites = {0x240750:[], 0x28550c:[], 0x24c8e4:[], 0x287780:[], 0x6b242c:[], 0x6b2950:[], 0x6b2958:[], 0x860dc0:[]}
+call_sites = {0x240044:[], 0x240750:[], 0x28550c:[], 0x24c8e4:[], 0x287780:[], 0x287770:[], 0x860dc0:[], 0x860d88:[], 0x6b242c:[], 0x6b2950:[], 0x6b2958:[]}
 def imm(s):
     s = s.strip().lstrip("#")
     return int(s, 0)
@@ -129,6 +129,17 @@ with open("report/currency-call-sites.txt", "w") as out:
         for addr, context in sites:
             out.write(f"\n-- call at 0x{addr:x} --\n")
             out.write("\n".join(context) + "\n")
+with open("report/currency-init-and-access.txt", "w") as out:
+    out.write("Focused code around wallet singleton initialization, field access and comparison helpers.\\n")
+    for a,b in ranges:
+        if a in (0x240000,0x24c8a0,0x860d80,0x287700):
+            out.write(f"\\n===== region 0x{a:x}-0x{b:x} =====\\n")
+            out.write("\\n".join(region_lines[a]) + "\\n")
+    out.write("\\n===== callers of focused helpers =====\\n")
+    for dest in (0x240044,0x24c8e4,0x287770,0x860dc0,0x860d88):
+        out.write(f"\\n-- BL xrefs to 0x{dest:x}: {len(call_sites[dest])} --\\n")
+        for addr, context in call_sites[dest]:
+            out.write(f"\\ncall at 0x{addr:x}\\n" + "\\n".join(context) + "\\n")
 with open("report/currency-field-stores.txt", "w") as out:
     out.write("Candidate stores at offsets +0x28 or +0x38; base-object identity must be validated.\\n")
     out.write(f"Total candidates: {len(field_stores)}\\n")

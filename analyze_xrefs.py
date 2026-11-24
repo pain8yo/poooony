@@ -15,7 +15,7 @@ for i in range(shnum):
 st = secs[shstrndx]
 names = data[st[4]:st[4] + st[5]]
 def cstr(buf, off):
-    end = buf.find(b"\\0", off)
+    end = buf.find(b"\0", off)
     return buf[off:end].decode(errors="replace")
 sec = {cstr(names, s[0]): s for s in secs}
 text_sec, ro = sec[".text"], sec[".rodata"]
@@ -29,7 +29,7 @@ targets = [
 ]
 target_va = {}
 for name in targets:
-    needle = name.encode() + b"\\0"
+    needle = name.encode() + b"\0"
     pos = data.find(needle, ro[4], ro[4] + ro[5])
     if pos >= 0:
         target_va[name] = ro[3] + pos - ro[4]
@@ -65,17 +65,17 @@ for i, x in enumerate(ins):
                     hits.append((i, j, by_va[va], va, "ADRP+LDR"))
                     break
 with open("report/currency-xrefs.txt", "w") as out:
-    out.write("Target strings and virtual addresses:\\n")
+    out.write("Target strings and virtual addresses:\n")
     for name, va in target_va.items():
-        out.write(f"{name}: 0x{va:x}\\n")
-    out.write(f"\\nDecoded {len(ins)} instructions; found {len(hits)} references.\\n")
+        out.write(f"{name}: 0x{va:x}\n")
+    out.write(f"\nDecoded {len(ins)} instructions; found {len(hits)} references.\n")
     seen = set()
     for i, j, name, va, kind in hits:
         key = (i, j, name)
         if key in seen:
             continue
         seen.add(key)
-        out.write(f"\\n===== {name} @ 0x{va:x} ({kind}), code 0x{ins[i].address:x} =====\\n")
+        out.write(f"\n===== {name} @ 0x{va:x} ({kind}), code 0x{ins[i].address:x} =====\n")
         for x in ins[max(0, i - 24):min(len(ins), j + 25)]:
-            out.write(f"0x{x.address:x}: {x.mnemonic} {x.op_str}\\n")
+            out.write(f"0x{x.address:x}: {x.mnemonic} {x.op_str}\n")
 print(f"Decoded {len(ins)} instructions; found {len(hits)} ADRP-based references across {len(target_va)} target strings")

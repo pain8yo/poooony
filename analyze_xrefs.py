@@ -39,8 +39,13 @@ history = deque(maxlen=40)
 pending = []
 hits = []
 decoded = 0
-ranges = [(0x243e00,0x244300),(0x2a7900,0x2a8000),(0x562200,0x562500),(0x6a8400,0x6a8c80),(0x6d0000,0x6d0400)]
+ranges = [
+    (0x243e00,0x244300),(0x2a7900,0x2a8000),(0x562200,0x562500),
+    (0x6a8400,0x6a8c80),(0x6d0000,0x6d0400),
+    (0x240700,0x240800),(0x2854c0,0x285600)
+]
 region_lines = {a:[] for a,b in ranges}
+call_sites = {0x240750:[], 0x28550c:[], 0x28550c:[]}
 def imm(s):
     s = s.strip().lstrip("#")
     return int(s, 0)
@@ -50,6 +55,13 @@ for addr, size, mnemonic, op_str in md.disasm_lite(code, text_addr):
     for a,b in ranges:
         if a <= addr < b:
             region_lines[a].append(line)
+    if mnemonic == "bl":
+        try:
+            dest = imm(op_str)
+            if dest in call_sites:
+                call_sites[dest].append((addr, list(history)))
+        except ValueError:
+            pass
     history.append(line)
     keep = []
     for page, reg, age in pending:
@@ -100,4 +112,10 @@ with open("report/currency-regions.txt", "w") as out:
     for a,b in ranges:
         out.write(f"\n===== region 0x{a:x}-0x{b:x} =====\n")
         out.write("\n".join(region_lines[a]) + "\n")
+with open("report/currency-call-sites.txt", "w") as out:
+    for dest, sites in call_sites.items():
+        out.write(f"\n===== BL xrefs to 0x{dest:x}: {len(sites)} =====\n")
+        for addr, context in sites:
+            out.write(f"\n-- call at 0x{addr:x} --\n")
+            out.write("\n".join(context) + "\n")
 print(f"Decoded {decoded} instructions; found {len(hits)} ADRP-based references across {len(target_va)} target strings")

@@ -50,3 +50,9 @@ jobs:
           name: mlp-android-library-analysis
           path: report/
           retention-days: 7
+      - name: Upload original game library for direct analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: mlp-library-binary
+          path: libMyPonyWorld.so
+          retention-days: 7

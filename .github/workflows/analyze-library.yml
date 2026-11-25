@@ -42,7 +42,9 @@ jobs:
             echo "=== Relocations mentioning relevant symbols ==="
             readelf -rW "$LIB" | grep -Ei 'currency|gems|bits|player|save' || true
           } > report/elf-map.txt
-          python3 analyze_xrefs.py "$LIB" | tee report/xref-summary.txt\n          python3 wallet_probe.py "$LIB" --out report/wallet-probe.txt | tee report/wallet-probe-summary.txt\n          grep -n -E "Native_BuyCurrency|Native_BuyPremiumCurrency|SetCurrencyData|SpendBits|SpendGems|SoftCurrency|HardCurrency|bits_amount|gems_amount" report/wallet-probe.txt | head -n 160 || true
+          python3 analyze_xrefs.py "$LIB" | tee report/xref-summary.txt
+          python3 wallet_probe.py "$LIB" --out report/wallet-probe.txt | tee report/wallet-probe-summary.txt
+          grep -n -E "Native_BuyCurrency|Native_BuyPremiumCurrency|SetCurrencyData|SpendBits|SpendGems|SoftCurrency|HardCurrency|bits_amount|gems_amount" report/wallet-probe.txt | head -n 160 || true
           sha256sum "$LIB" > report/checksum.txt
       - name: Upload analysis report
         uses: actions/upload-artifact@v4

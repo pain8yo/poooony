@@ -76,7 +76,7 @@ def main():
             except ValueError:
                 pass
         elif m.startswith("ldr") and len(parts) >= 2:
-            mm = re.search(r"\\[\\s*(x\\d+|w\\d+)\\s*,\\s*(#[^\\]]+)\\]", parts[1])
+            mm = re.search(r"\[\s*(x\d+|w\d+)\s*,\s*(#[^\]]+)\]", parts[1])
             if mm and mm.group(1) in pages:
                 try:
                     va = pages[mm.group(1)][0] + imm(mm.group(2))

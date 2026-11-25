@@ -97,10 +97,10 @@ def main():
     lines.append(f"Resolved references={sum(map(len, refs.values()))}")
     for va, name in sorted(targets.items(), key=lambda kv: (kv[1].lower(), kv[0])):
         hits = refs.get(va, [])
-        lines.append(f"\\n### {name} @ 0x{va:x} — {len(hits)} xref(s)")
+        lines.append(f"\n### {name} @ 0x{va:x} — {len(hits)} xref(s)")
         for idx, kind in hits:
             lo, hi = max(0, idx-args.context), min(len(ins), idx+args.context+1)
-            lines.append(f"\\n-- {kind}; reference at 0x{ins[idx].address:x} --")
+            lines.append(f"\n-- {kind}; reference at 0x{ins[idx].address:x} --")
             for j in range(lo, hi):
                 x = ins[j]
                 mark = ">>" if j == idx else "  "
@@ -112,11 +112,11 @@ def main():
             for x in ins[max(0,idx-80):min(len(ins),idx+80)]:
                 if x.mnemonic.startswith(("str","stp","stur")):
                     func_stores.add((x.address,x.mnemonic,x.op_str))
-    lines.append("\\n### Nearby store instructions (context only; offsets are not presumed wallet fields)")
+    lines.append("\n### Nearby store instructions (context only; offsets are not presumed wallet fields)")
     for addr,m,op in sorted(func_stores):
         lines.append(f"0x{addr:x}: {m} {op}")
     with open(args.out, "w", encoding="utf-8") as out:
-        out.write("\\n".join(lines) + "\\n")
+        out.write("\n".join(lines) + "\n")
     print(f"wallet-probe: {len(targets)} strings, {sum(map(len,refs.values()))} references, {len(func_stores)} nearby stores -> {args.out}")
 
 if __name__ == "__main__":

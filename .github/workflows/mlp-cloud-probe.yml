@@ -1,0 +1,29 @@
+name: MLP cloud endpoint connectivity test
+
+on:
+  push:
+    paths:
+      - ".github/workflows/mlp-cloud-probe.yml"
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve host
+        run: |
+          set -x
+          getent hosts gllive.gameloft.com || true
+          nslookup gllive.gameloft.com || true
+      - name: Probe endpoint read-only
+        run: |
+          set +e
+          curl -4 -sS -L --max-time 20 -D /tmp/headers.txt -o /tmp/body.txt             'https://gllive.gameloft.com/ope/GenericXPlayer_v1.php'
+          rc=$?
+          echo "curl_exit=$rc"
+          echo '--- HEADERS ---'
+          cat /tmp/headers.txt || true
+          echo '--- BODY (first 4000 bytes) ---'
+          head -c 4000 /tmp/body.txt || true
+          echo
+          exit 0

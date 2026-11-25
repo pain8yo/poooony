@@ -1,41 +1,43 @@
-# iOS cloud-save protocol investigation — 2026-11-25
+# iOS cloud-save server investigation — 2026-11-25
 
-## Target
+## Target profile
 
-Historical iOS profile requested by the owner:
-- Friend Code: `d0ccf1`
+- Historical Friend Code: `d0ccf1`
+- Original platform: iOS
 - Game Center identity: `_molotkova_`
-- Last confirmed progress: level 109+
-- Required result: the original server-side save blob and its complete pony/building/shop/quest inventory, not a reconstructed profile.
+- Last proven progress: level 109+
+- Required output: the historical server-side cloud save with the original pony/building/shop/quest inventory, not a reconstructed profile.
 
-## Evidence recovered from the uploaded iOS app string dump
+## Server endpoint
 
-The Library artifact `Новый документ.docx.txt` contains extracted strings from the iOS app bundle. Relevant observations:
+The iOS app configuration dump contains this configured endpoint in `oconf.bar`:
 
-1. `oconf.bar` contains:
-   `XPlayerURL: https://gllive.gameloft.com/ope/GenericXPlayer_v1.php`
-2. The main executable string section contains `cloud_userid`.
-3. The executable also contains generic Apple networking/security symbols, including `NSURLSessionDownloadTask` and `kSecAttrSynchronizable`.
+`https://gllive.gameloft.com/ope/GenericXPlayer_v1.php`
 
-These observations establish that the app bundle contains an XPlayer social-service URL and a cloud-related identifier string. They do **not** establish that XPlayer serves game-save blobs, that `cloud_userid` is the historical account key, or what request/response fields the save service requires. Generic NSURLSession symbols alone do not identify the save endpoint.
+For this investigation, this is treated as the game's cloud-save server endpoint, as identified by the account owner. The endpoint's presence is confirmed in the app configuration. The exact operation names, request fields, authentication/signature, account-ID mapping, and response/blob format still need to be recovered from the client implementation or a captured request.
 
-## Cross-check against the Android 11.5.0o work in this repository
+## Related client-side evidence
 
-The Android native-library investigation has identified currency/configuration strings and bridge registrations, but no confirmed save-download API or authenticated save retrieval function. The Android findings cannot be treated as proof of the older iOS save protocol.
+The extracted iOS executable strings include `cloud_userid`, and generic networking symbols such as `NSURLSessionDownloadTask`. This is useful evidence for locating the client code path, but does not by itself reveal the wire protocol.
+
+The public GLLib XPlayer reference documents a login/registration flow (`sendLogin` / `handleLogin`) and a player-data parameter. It is a lead for understanding the XPlayer protocol, not proof of the exact MLP save request fields.
 
 ## Current retrieval status
 
-- No authenticated response containing Friend Code `d0ccf1` has been obtained.
-- No original cloud-save blob or metadata record has been retrieved.
-- No decryption key/algorithm for the historical cloud blob has been established.
-- No file produced from the available evidence can honestly be labelled the original server save.
+- The configured server endpoint has been identified.
+- No successful authenticated request for Friend Code `d0ccf1` has yet been made.
+- No response containing the historical save metadata or blob has been retrieved.
+- The exact mapping between Friend Code, Game Center identity, `cloud_userid`, and any GLUID is not yet established.
+- The historical blob's encoding/encryption and matching key have not been established.
+- No file produced so far can honestly be labelled the original cloud save.
 
-## Next technical gate
+## Required protocol extraction
 
-A real protocol trace or disassembly around the iOS code paths that read/write `cloud_userid` is required to identify:
-- the actual save service host and path;
-- request method, parameters, and authentication/signature;
-- account identifier mapping (Game Center / GLUID / cloud_userid / Friend Code);
-- response format and save-blob location.
+Inspect the iOS executable around references to:
+- `cloud_userid`
+- `GenericXPlayer_v1.php`
+- request construction and form/POST serialization
+- response parsing and save download/upload callbacks
+- Game Center identity and account registration/login mapping
 
-Until those are identified, sending guessed requests to the XPlayer URL would not retrieve the historical save and could not justify creating a purported original save file.
+Recover the actual request contract before attempting the read operation for the historical account. Do not send guessed write, overwrite, migration, or delete operations. Preserve any existing local save and current account.

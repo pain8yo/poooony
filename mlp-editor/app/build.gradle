@@ -1,0 +1,6 @@
+plugins { id 'com.android.application' }
+android {
+    namespace 'com.pain8yo.mlpsaveeditor'
+    compileSdk 35
+    defaultConfig { applicationId 'com.pain8yo.mlpsaveeditor'; minSdk 23; targetSdk 28; versionCode 1; versionName '1.0' }
+}
